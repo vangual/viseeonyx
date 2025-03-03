@@ -1,0 +1,10 @@
+[project]
+name = "viseeonyx"
+version = "0.1.0"
+description = "A tool to quickly create collages"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=11.1.0",
+    "wxpython>=4.2.2",
+]
