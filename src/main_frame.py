@@ -52,6 +52,15 @@ class MainFrame(wx.Frame):
 
             menu.AppendSeparator()
 
+            reset_size_item = menu.Append(wx.ID_ANY, "Reset Size to Original")
+            self.Bind(wx.EVT_MENU, sel_obj.reset_size, reset_size_item)
+            reset_zoom_item = menu.Append(wx.ID_ANY, "Reset Zoom to Original")
+            self.Bind(wx.EVT_MENU, sel_obj.reset_zoom, reset_zoom_item)
+            reset_viewport_offset_item = menu.Append(wx.ID_ANY, "Reset Offset to Original")
+            self.Bind(wx.EVT_MENU, sel_obj.reset_viewport_offset, reset_viewport_offset_item)
+
+            menu.AppendSeparator()
+
             delete_item = menu.Append(wx.ID_ANY, "Delete Selected Object")
             self.Bind(wx.EVT_MENU, self.on_delete_object, delete_item)
         else:

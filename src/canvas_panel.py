@@ -237,10 +237,12 @@ class FileDropTarget(wx.FileDropTarget):
         self.canvas_panel = canvas_panel
 
     def OnDropFiles(self, x, y, filenames):
+        c_w, c_h = self.canvas_panel.GetSize()
         # For each file, create a new image object
         for path in filenames:
             # Could validate image format if desired
-            obj = ImageObject(path)
+            obj = ImageObject(path, canvas_width=c_w, canvas_height=c_h)
+            obj.reset_size()
             obj.x, obj.y = x, y
             self.canvas_panel.image_objects.append(obj)
             # Move them slightly so they don't stack exactly

@@ -34,3 +34,12 @@ def snap_to_nearby_edges(x, y, w, h, image_objects, canvas_size, threshold=10):
             y = obj.y - h
 
     return x, y
+
+
+def bytes_to_human_readable(num_bytes):
+    """Convert a byte count into a human-readable format."""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if num_bytes < 1024:
+            return f"{num_bytes:.2f} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.2f} PB"
