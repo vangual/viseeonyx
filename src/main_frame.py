@@ -8,12 +8,19 @@ import logging
 
 
 class MainFrame(wx.Frame):
-    def __init__(self, parent, title, settings_manager):
-        # Style for borderless. Alternatively, you can do normal style and call ShowFullScreen.
-        style = wx.FRAME_NO_TASKBAR | wx.NO_BORDER
+    def __init__(self, parent, title, settings_manager, debug_mode=False):
+        # Choose style based on debug mode
+        if debug_mode:
+            # Use default window style for debug mode (with title bar, borders, etc.)
+            style = wx.DEFAULT_FRAME_STYLE
+        else:
+            # Style for borderless fullscreen mode
+            style = wx.FRAME_NO_TASKBAR | wx.NO_BORDER
+
         super().__init__(parent, title=title, style=style)
 
         self.settings_manager = settings_manager
+        self.debug_mode = debug_mode
 
         # Create the main panel (the canvas)
         self.canvas_panel = CanvasPanel(self, settings_manager=self.settings_manager)

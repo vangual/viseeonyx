@@ -1,8 +1,9 @@
 # src/app.py
 import wx
+import os
+import sys
 from .main_frame import MainFrame
 from .settings_manager import SettingsManager
-# import os
 import logging
 
 
@@ -20,13 +21,71 @@ class ViseeonyxApp(wx.App):
         # Initialize settings manager (loads .ini, sets defaults, etc.)
         self.settings_manager = SettingsManager()
 
-        # Create main frame
-        self.frame = MainFrame(None, title="viseeonyx",
-                               settings_manager=self.settings_manager)
+        # Detect if running in debugger/development mode first
+        is_debug = (hasattr(sys, 'gettrace') and sys.gettrace() is not None) or ('--debug' in sys.argv) or ('debugpy' in sys.modules) or ('pdb' in sys.modules) or ('VSCODE_PID' in os.environ)
+
+        # Create main frame with appropriate style for debug vs production
+        if is_debug:
+            # Use standard window decorations for debug mode
+            frame_title = "viseeonyx (DEBUG)"
+            logging.info("Debug mode detected - using standard window style")
+        else:
+            # Use borderless style for fullscreen mode
+            frame_title = "viseeonyx"
+
+        self.frame = MainFrame(None, title=frame_title,
+                               settings_manager=self.settings_manager, debug_mode=is_debug)
         self.SetTopWindow(self.frame)
 
-        # By default, show in fullscreen (no OS window decorations)
-        self.frame.ShowFullScreen(True, style=wx.FULLSCREEN_ALL)
+        if is_debug:
+            # Show in windowed mode for debugging
+            logging.info("Debug mode detected - starting in windowed mode")
 
-        self.frame.Show()
+            # Log initial state
+            logging.debug(f"Frame style: {self.frame.GetWindowStyleFlag()}")
+            logging.debug(f"Frame visible before setup: {self.frame.IsShown()}")
+
+            self.frame.SetSize((1200, 800))
+            self.frame.Center()
+
+            # Force window visibility and rendering
+            self.frame.Show(True)
+            logging.debug(f"Frame visible after Show(True): {self.frame.IsShown()}")
+
+            self.frame.Raise()
+            self.frame.SetFocus()
+
+            # Additional visibility fixes for debug mode
+            self.frame.Iconize(False)  # Ensure not minimized
+            self.frame.Maximize(False)  # Ensure not maximized (can cause rendering issues)
+
+            # Force a refresh and update
+            self.frame.Refresh()
+            self.frame.Update()
+
+            # Try to bring to foreground (Windows specific)
+            try:
+                import ctypes
+                hwnd = self.frame.GetHandle()
+                logging.debug(f"Window handle: {hwnd}")
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                ctypes.windll.user32.BringWindowToTop(hwnd)
+
+                # Additional Windows API calls to force visibility
+                ctypes.windll.user32.ShowWindow(hwnd, 1)  # SW_SHOW
+                ctypes.windll.user32.UpdateWindow(hwnd)
+            except Exception as e:
+                logging.debug(f"Could not force window to foreground: {e}")
+
+            # Final position and size check
+            pos = self.frame.GetPosition()
+            size = self.frame.GetSize()
+            logging.info(f"Debug window final position: {pos}, size: {size}")
+            logging.info("Debug window visibility fixes applied")
+        else:
+            # By default, show in fullscreen (no OS window decorations)
+            logging.info("Starting in fullscreen mode")
+            self.frame.ShowFullScreen(True, style=wx.FULLSCREEN_ALL)
+            self.frame.Show()
+
         return True

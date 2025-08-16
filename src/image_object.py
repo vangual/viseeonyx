@@ -17,6 +17,8 @@ class ImageObject:
         # Cache the original PIL image (lazy load)
         self._original_image = None
         self._aspect_ratio = None
+        self._visible_image = None  # cached visible portion
+        self._last_dc = None  # for redraw functionality
 
         if canvas_width and canvas_height:
             self.canvas_w = canvas_width
@@ -30,6 +32,7 @@ class ImageObject:
 
     def draw(self, dc):
         """Draw the visible portion of this image onto the given DC."""
+        self._last_dc = dc  # Store for redraw functionality
         self.load_image()
         if not self._original_image:
             return
@@ -134,7 +137,7 @@ class ImageObject:
 
     def redraw(self):
         """Redraw the image in its current position and size."""
-        if self._last_dc:
+        if hasattr(self, '_last_dc') and self._last_dc:
             self.draw(self._last_dc)
 
     def __eq__(self, value):
