@@ -45,6 +45,14 @@ Viseeonyx is a wxPython-based collage creation tool that runs in fullscreen mode
 
 ## Development Patterns
 
+### Code Quality Standards
+- **Trailing Whitespace**: flake8 W293 warnings are to be taken seriously - do not create code that violates this rule
+- **Project Organization**: Keep the project root directory as clean as possible
+  - Create files in appropriate subdirectories that make logical sense
+  - Place temporary files and helper scripts in a dedicated folder (e.g., `temp/`, `scripts/`) that does not end up in git
+  - Use `.gitignore` to exclude temporary directories and files
+  - Documentation belongs in `docs/` with appropriate subdirectories (e.g., `docs/design/`)
+
 ### Development Workflow with `uv`
 - **Setup**: `uv sync` to install dependencies from `uv.lock`
 - **Run application**: `uv run python main.py`
