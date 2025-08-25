@@ -12,6 +12,7 @@ Viseeonyx is a wxPython-based collage creation tool that runs in fullscreen mode
 - **`src/image_object.py`**: Individual image representation with PIL backend, zoom/viewport/positioning logic
 - **`src/arrangement.py`**: Auto-layout algorithms (`arrange_no_resize`, `arrange_with_resize`)
 - **`src/settings_manager.py`**: INI-based configuration with fallback defaults
+- **`src/file_navigator.py`**: File discovery, sorting, and background preloading for mouse wheel navigation
 
 ### Key Patterns & Conventions
 
@@ -19,10 +20,15 @@ Viseeonyx is a wxPython-based collage creation tool that runs in fullscreen mode
 - Images are `ImageObject` instances with position (`x`, `y`), dimensions (`width`, `height`), `zoom_factor`, and `viewport_offset`
 - PIL images cached lazily in `_original_image` field, converted to wx.Bitmap for rendering
 - Each object can be cropped/zoomed independently - viewport shows portion of scaled source image
+- **Mouse Wheel Navigation**: Objects can change source path dynamically with `change_source_path()` method
+- **Background Preloading**: `FileNavigator` preloads adjacent images for smooth navigation experience
+- **Image Isolation**: Preloaded images are copied to prevent conflicts between multiple objects showing same file
+- **Immediate Refresh**: Visual updates use `Refresh()`, `Update()`, and `wx.SafeYield()` for immediate display
 
 #### Event Flow
 - Right-click → context menu with object-specific actions (mark/swap, reset size/zoom/offset, delete)
 - Left-click → select/drag with `snap_to_nearby_edges()` utility for alignment assistance
+- Mouse wheel → navigate through files in same folder (when object selected)
 - Keyboard: `+`/`-` for zoom, `X` or `Esc` to quit, hotkeys handled at multiple levels
 
 #### State Management & Export

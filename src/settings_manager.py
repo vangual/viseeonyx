@@ -27,6 +27,13 @@ class SettingsManager:
             self.config.add_section("Canvas")
             self.config.set("Canvas", "background_color", "#FFFFFF")
 
+        # Navigation settings
+        if not self.config.has_section("Navigation"):
+            self.config.add_section("Navigation")
+            self.config.set("Navigation", "sort_method", "name_asc")  # name_asc, name_desc, date_asc, date_desc
+            self.config.set("Navigation", "preload_count", "1")  # Number of images to preload in each direction
+            self.config.set("Navigation", "enable_wheel_navigation", "true")
+
     def get_setting(self, section, key, fallback=None):
         if self.config.has_option(section, key):
             return self.config.get(section, key)

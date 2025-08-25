@@ -1,5 +1,6 @@
 # src/image_object.py
 import wx
+import logging
 from PIL import Image
 from .utils import bytes_to_human_readable
 
@@ -23,12 +24,51 @@ class ImageObject:
         if canvas_width and canvas_height:
             self.canvas_w = canvas_width
             self.canvas_h = canvas_height
+        else:
+            self.canvas_w = None
+            self.canvas_h = None
 
     def load_image(self):
         if not self._original_image:
-            self._original_image = Image.open(self.source_path)
-            w, h = self._original_image.size
-            self._aspect_ratio = w / float(h) if h != 0 else 1.0
+            # Always load fresh to ensure complete isolation between objects
+            try:
+                self._original_image = Image.open(self.source_path)
+                # Immediately create a copy to ensure complete isolation
+                self._original_image = self._original_image.copy()
+                w, h = self._original_image.size
+                self._aspect_ratio = w / float(h) if h != 0 else 1.0
+            except Exception as e:
+                logging.error(f"Failed to load image {self.source_path}: {e}")
+                self._original_image = None
+                self._aspect_ratio = 1.0
+
+    def change_source_path(self, new_path, preloaded_image=None):
+        """Change the source path and optionally use a preloaded image."""
+        if new_path == self.source_path:
+            return  # No change needed
+
+        self.source_path = new_path
+
+        # Use preloaded image if available, otherwise clear cache
+        if preloaded_image:
+            # Make sure we have a completely independent copy
+            try:
+                self._original_image = preloaded_image.copy()
+                w, h = self._original_image.size
+                self._aspect_ratio = w / float(h) if h != 0 else 1.0
+            except Exception as e:
+                logging.error(f"Failed to copy preloaded image for {new_path}: {e}")
+                self._original_image = None
+                self._aspect_ratio = None
+        else:
+            self._original_image = None
+            self._aspect_ratio = None
+
+        # Clear all cached images to force reload/redraw
+        self._visible_image = None
+
+        # Invalidate any cached display context
+        self._last_dc = None
 
     def draw(self, dc):
         """Draw the visible portion of this image onto the given DC."""
@@ -44,6 +84,7 @@ class ImageObject:
         scaled_h = int(self._original_image.height * self.zoom_factor)
 
         # Convert PIL to wx.Bitmap
+        # Create a working copy to ensure complete isolation
         pil_scaled = self._original_image.resize((scaled_w, scaled_h), Image.Resampling.LANCZOS)
 
         # Crop out the portion that fits in our object rectangle
@@ -51,8 +92,15 @@ class ImageObject:
         # Ensure we don't go out of bounds
         right = min(vx + self.width, scaled_w)
         bottom = min(vy + self.height, scaled_h)
-        cropped = pil_scaled.crop((vx, vy, right, bottom))
-        self._visible_image = cropped
+
+        # Create a new cropped image for this specific draw operation
+        try:
+            cropped = pil_scaled.crop((vx, vy, right, bottom))
+            # Store as _visible_image but make it a copy to prevent sharing issues
+            self._visible_image = cropped.copy()
+        except Exception as e:
+            logging.error(f"Error cropping image {self.source_path}: {e}")
+            return
 
         wx_img = wx.Image(cropped.size[0], cropped.size[1])
         wx_img.SetData(cropped.convert("RGB").tobytes())
@@ -139,6 +187,11 @@ class ImageObject:
         """Redraw the image in its current position and size."""
         if hasattr(self, '_last_dc') and self._last_dc:
             self.draw(self._last_dc)
+
+    def force_refresh(self):
+        """Force a complete refresh of the image object by clearing all caches."""
+        self._visible_image = None
+        self._last_dc = None
 
     def __eq__(self, value):
         if not isinstance(value, ImageObject):

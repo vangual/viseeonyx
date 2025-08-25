@@ -177,10 +177,15 @@ class MainFrame(wx.Frame):
 
     def on_open_settings(self, event):
         dlg = SettingsDialog(self, self.settings_manager)
-        dlg.ShowModal()
+        result = dlg.ShowModal()
         dlg.Destroy()
-        # Potentially apply new settings here, e.g. canvas background color
-        self.canvas_panel.Refresh()
+
+        if result == wx.ID_OK:
+            # Apply new settings - notify canvas panel about changes
+            self.canvas_panel.on_settings_changed()
+            # Potentially apply new settings here, e.g. canvas background color
+            self.canvas_panel.canvas_bg = self.settings_manager.get_setting("Canvas", "background_color", "#FFFFFF")
+            self.canvas_panel.Refresh()
 
     def on_quit(self, event):
         # End fullscreen, or close the app entirely

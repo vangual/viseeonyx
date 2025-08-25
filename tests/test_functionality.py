@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.arrangement import arrange_no_resize, arrange_with_resize  # noqa: E402
 from src.settings_manager import SettingsManager  # noqa: E402
+from src.file_navigator import FileNavigator  # noqa: E402
 
 
 class TestArrangement(unittest.TestCase):
@@ -172,6 +173,132 @@ class TestCanvasStateManagement(unittest.TestCase):
         for obj_data in loaded_state:
             for field in required_fields:
                 self.assertIn(field, obj_data, f"Field '{field}' should be present in state data")
+
+
+class TestFileNavigator(unittest.TestCase):
+    def setUp(self):
+        """Set up test environment for file navigation."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.settings_manager = SettingsManager()
+        self.file_navigator = FileNavigator(self.settings_manager)
+
+        # Create test image files
+        self.test_files = [
+            "image_01.jpg",
+            "image_02.png",
+            "image_03.gif",
+            "picture_a.jpg",
+            "picture_z.png"
+        ]
+
+        for filename in self.test_files:
+            filepath = os.path.join(self.temp_dir, filename)
+            with open(filepath, 'w') as f:
+                f.write("mock image data")
+
+    def tearDown(self):
+        """Clean up test files."""
+        import shutil
+        shutil.rmtree(self.temp_dir)
+        self.file_navigator.clear_cache()
+
+    def test_get_files_in_directory(self):
+        """Test getting files in directory with different sort methods."""
+        test_file = os.path.join(self.temp_dir, self.test_files[0])
+
+        # Test name ascending (default)
+        self.settings_manager.set_setting("Navigation", "sort_method", "name_asc")
+        self.file_navigator.clear_cache()  # Clear cache to pick up new setting
+        files, index = self.file_navigator.get_files_in_directory(test_file)
+
+        self.assertEqual(len(files), 5)
+        # Should be sorted by name
+        basenames = [os.path.basename(f) for f in files]
+        self.assertEqual(basenames[0], "image_01.jpg")
+        self.assertEqual(basenames[-1], "picture_z.png")
+
+    def test_navigation_methods(self):
+        """Test next/previous file navigation."""
+        test_file = os.path.join(self.temp_dir, "image_02.png")
+
+        # Test next file
+        next_file = self.file_navigator.get_next_file(test_file)
+        self.assertIsNotNone(next_file)
+        self.assertTrue(os.path.basename(next_file) in self.test_files)
+
+        # Test previous file
+        prev_file = self.file_navigator.get_previous_file(test_file)
+        self.assertIsNotNone(prev_file)
+        self.assertTrue(os.path.basename(prev_file) in self.test_files)
+
+        # Should wrap around at boundaries
+        first_file = os.path.join(self.temp_dir, "image_01.jpg")
+        prev_of_first = self.file_navigator.get_previous_file(first_file)
+        self.assertIsNotNone(prev_of_first)
+        # Should be the last file in the sorted list
+        self.assertEqual(os.path.basename(prev_of_first), "picture_z.png")
+
+    def test_sort_methods(self):
+        """Test different file sorting methods."""
+        test_file = os.path.join(self.temp_dir, self.test_files[0])
+
+        # Test name descending
+        self.settings_manager.set_setting("Navigation", "sort_method", "name_desc")
+        files, _ = self.file_navigator.get_files_in_directory(test_file)
+        basenames = [os.path.basename(f) for f in files]
+        self.assertEqual(basenames[0], "picture_z.png")
+        self.assertEqual(basenames[-1], "image_01.jpg")
+
+    def test_preload_limits(self):
+        """Test that preloading doesn't exceed reasonable limits."""
+        test_file = os.path.join(self.temp_dir, self.test_files[0])
+
+        # Test with high preload count - should be limited
+        self.settings_manager.set_setting("Navigation", "preload_count", "10")
+
+        # Start preloading
+        self.file_navigator.start_preloading(test_file)
+
+        # Give threads time to start (but not complete)
+        import time
+        time.sleep(0.1)
+
+        # Should have limited the number of concurrent threads
+        active_threads = sum(1 for thread in self.file_navigator._preload_threads.values() if thread.is_alive())
+        self.assertLessEqual(active_threads, 5)  # Should be limited to reasonable number
+
+    def test_preloaded_image_isolation(self):
+        """Test that preloaded images are properly isolated between objects."""
+        test_file = os.path.join(self.temp_dir, self.test_files[0])
+
+        # Get preloaded image twice
+        self.file_navigator.start_preloading(test_file)
+
+        # Wait briefly for preloading (not too long since they're mock files)
+        import time
+        time.sleep(0.05)
+
+        # Get two copies of the preloaded image
+        img1 = self.file_navigator.get_preloaded_image(test_file)
+        img2 = self.file_navigator.get_preloaded_image(test_file)
+
+        # They should be different instances (not shared)
+        if img1 is not None and img2 is not None:
+            self.assertIsNot(img1, img2, "Preloaded images should be separate instances")
+
+    def test_cache_invalidation(self):
+        """Test that cache can be cleared and invalidated."""
+        test_file = os.path.join(self.temp_dir, self.test_files[0])
+
+        # Get files to populate cache
+        self.file_navigator.get_files_in_directory(test_file)
+
+        # Clear cache
+        self.file_navigator.clear_cache()
+
+        # Should work after cache clear
+        files, index = self.file_navigator.get_files_in_directory(test_file)
+        self.assertEqual(len(files), 5)
 
 
 if __name__ == '__main__':

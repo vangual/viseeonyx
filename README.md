@@ -10,6 +10,9 @@ A wxPython-based collage creation tool that runs in fullscreen mode. Create beau
 - **Multiple Export Formats**: Save your collages as PNG, JPEG, WebP, or BMP
 - **State Management**: Save and load your work-in-progress collages
 - **Auto-arrangement**: Automatically arrange multiple images in organized layouts
+- **Mouse Wheel Navigation**: Browse through all images in a folder using mouse wheel
+- **Background Preloading**: Smooth navigation with intelligent image preloading
+- **Flexible Sorting**: Sort files by name or modification date (ascending/descending)
 - **Fullscreen Experience**: Immersive, distraction-free creative environment
 
 ## Installation
@@ -53,7 +56,15 @@ The application starts in fullscreen mode for an immersive creative experience.
 - **Select**: Left-click on any image to select it (red border appears)
 - **Move**: Click and drag selected images to reposition them
 - **Zoom**: Use `+` and `-` keys to zoom in/out on selected images
+- **Navigate Files**: Use mouse wheel to browse through images in the same folder
 - **Context Menu**: Right-click for additional options
+
+#### Mouse Wheel Navigation
+- **Wheel Up**: Navigate to previous image in the folder
+- **Wheel Down**: Navigate to next image in the folder
+- **Requirements**: Must have an image selected first
+- **Sorting**: Files can be sorted by name or date (ascending/descending) in Settings
+- **Performance**: Adjacent images are preloaded in background for smooth navigation
 
 #### Context Menu Options
 - **Mark/Swap Objects**: Mark an image, then swap positions with another
@@ -71,10 +82,22 @@ The application starts in fullscreen mode for an immersive creative experience.
 - **Save State**: Save the current arrangement to reload later (JSON format)
 - **Load State**: Restore a previously saved arrangement
 
+#### Settings
+Access the settings dialog via the right-click context menu:
+
+**Canvas Settings:**
+- **Background Color**: Set the canvas background color (HTML hex format)
+
+**Navigation Settings:**
+- **Enable Mouse Wheel Navigation**: Toggle mouse wheel file navigation on/off
+- **File Sorting Method**: Choose how files are sorted (Name A-Z/Z-A, Date oldest/newest first)
+- **Preload Count**: Number of images to preload in each direction (0-5, default: 2)
+
 #### Keyboard Shortcuts
 - **Esc** or **X**: Exit the application
 - **+**: Zoom in on selected image
 - **-**: Zoom out on selected image
+- **Mouse Wheel**: Navigate through files in folder (when image selected)
 
 ### Tips for Best Results
 - Use high-resolution images for better quality exports
