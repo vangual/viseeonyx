@@ -8,6 +8,10 @@ import logging
 
 
 class ViseeonyxApp(wx.App):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exit_code = 0  # Track desired exit code
+
     def OnInit(self):
         """
         Called upon app initialization. Creates the main frame and shows it.
@@ -89,3 +93,7 @@ class ViseeonyxApp(wx.App):
             self.frame.Show()
 
         return True
+
+    def set_exit_code(self, code):
+        """Set the desired exit code for the application."""
+        self.exit_code = code

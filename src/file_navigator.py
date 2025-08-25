@@ -84,23 +84,35 @@ class FileNavigator:
             logging.warning(f"Unknown sort method: {sort_method}, using name_asc")
             return sorted(files, key=lambda x: os.path.basename(x).lower())
 
-    def get_next_file(self, current_path: str) -> Optional[str]:
-        """Get the next file in the directory sequence."""
+    def get_next_file(self, current_path: str) -> tuple[Optional[str], bool]:
+        """Get the next file in the directory sequence.
+        Returns (next_file_path, is_wraparound)
+        """
         files_list, current_index = self.get_files_in_directory(current_path)
         if not files_list or current_index == -1:
-            return None
+            return None, False
 
-        next_index = (current_index + 1) % len(files_list)
-        return files_list[next_index]
+        if current_index == len(files_list) - 1:
+            # We're at the last file, wrap to first
+            return files_list[0], True
+        else:
+            # Normal progression
+            return files_list[current_index + 1], False
 
-    def get_previous_file(self, current_path: str) -> Optional[str]:
-        """Get the previous file in the directory sequence."""
+    def get_previous_file(self, current_path: str) -> tuple[Optional[str], bool]:
+        """Get the previous file in the directory sequence.
+        Returns (previous_file_path, is_wraparound)
+        """
         files_list, current_index = self.get_files_in_directory(current_path)
         if not files_list or current_index == -1:
-            return None
+            return None, False
 
-        prev_index = (current_index - 1) % len(files_list)
-        return files_list[prev_index]
+        if current_index == 0:
+            # We're at the first file, wrap to last
+            return files_list[-1], True
+        else:
+            # Normal progression
+            return files_list[current_index - 1], False
 
     def start_preloading(self, current_path: str):
         """Start background preloading of adjacent images."""

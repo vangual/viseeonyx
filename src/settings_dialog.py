@@ -72,9 +72,30 @@ class SettingsDialog(wx.Dialog):
 
         nav_panel.SetSizer(nav_sizer)
 
+        # UI settings tab
+        ui_panel = wx.Panel(notebook)
+        ui_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Overlay timeout setting
+        overlay_timeout_label = wx.StaticText(ui_panel, label="Status Overlay Timeout (milliseconds):")
+        self.overlay_timeout_spin = wx.SpinCtrl(ui_panel, min=100, max=10000, initial=1500)
+        timeout_value = int(self.settings_manager.get_setting("UI", "overlay_timeout_ms", "1500"))
+        self.overlay_timeout_spin.SetValue(timeout_value)
+
+        ui_sizer.Add(overlay_timeout_label, 0, wx.ALL, 5)
+        ui_sizer.Add(self.overlay_timeout_spin, 0, wx.ALL, 5)
+
+        # Help text for UI settings
+        ui_help_text = wx.StaticText(ui_panel, label="Controls how long status overlays (zoom level, navigation feedback) stay visible before disappearing automatically. Mouse interactions will clear overlays immediately.")
+        ui_help_text.Wrap(400)
+        ui_sizer.Add(ui_help_text, 0, wx.ALL, 5)
+
+        ui_panel.SetSizer(ui_sizer)
+
         # Add tabs to notebook
         notebook.AddPage(canvas_panel, "Canvas")
         notebook.AddPage(nav_panel, "Navigation")
+        notebook.AddPage(ui_panel, "UI")
 
         panel_sizer.Add(notebook, 1, wx.EXPAND)
         panel.SetSizer(panel_sizer)
@@ -104,6 +125,9 @@ class SettingsDialog(wx.Dialog):
         self.settings_manager.set_setting("Navigation", "sort_method", selected_sort)
 
         self.settings_manager.set_setting("Navigation", "preload_count", str(self.preload_spin.GetValue()))
+
+        # Save UI settings
+        self.settings_manager.set_setting("UI", "overlay_timeout_ms", str(self.overlay_timeout_spin.GetValue()))
 
         self.settings_manager.save()
         self.EndModal(wx.ID_OK)

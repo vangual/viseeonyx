@@ -222,19 +222,28 @@ class TestFileNavigator(unittest.TestCase):
         test_file = os.path.join(self.temp_dir, "image_02.png")
 
         # Test next file
-        next_file = self.file_navigator.get_next_file(test_file)
+        result = self.file_navigator.get_next_file(test_file)
+        self.assertIsNotNone(result)
+        next_file, is_wraparound = result
         self.assertIsNotNone(next_file)
         self.assertTrue(os.path.basename(next_file) in self.test_files)
+        self.assertFalse(is_wraparound)  # Should not wrap for middle file
 
         # Test previous file
-        prev_file = self.file_navigator.get_previous_file(test_file)
+        result = self.file_navigator.get_previous_file(test_file)
+        self.assertIsNotNone(result)
+        prev_file, is_wraparound = result
         self.assertIsNotNone(prev_file)
         self.assertTrue(os.path.basename(prev_file) in self.test_files)
+        self.assertFalse(is_wraparound)  # Should not wrap for middle file
 
         # Should wrap around at boundaries
         first_file = os.path.join(self.temp_dir, "image_01.jpg")
-        prev_of_first = self.file_navigator.get_previous_file(first_file)
+        result = self.file_navigator.get_previous_file(first_file)
+        self.assertIsNotNone(result)
+        prev_of_first, is_wraparound = result
         self.assertIsNotNone(prev_of_first)
+        self.assertTrue(is_wraparound)  # Should wrap around at boundary
         # Should be the last file in the sorted list
         self.assertEqual(os.path.basename(prev_of_first), "picture_z.png")
 

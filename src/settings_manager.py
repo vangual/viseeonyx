@@ -34,6 +34,11 @@ class SettingsManager:
             self.config.set("Navigation", "preload_count", "1")  # Number of images to preload in each direction
             self.config.set("Navigation", "enable_wheel_navigation", "true")
 
+        # UI settings
+        if not self.config.has_section("UI"):
+            self.config.add_section("UI")
+            self.config.set("UI", "overlay_timeout_ms", "1500")  # Default overlay timeout in milliseconds
+
     def get_setting(self, section, key, fallback=None):
         if self.config.has_option(section, key):
             return self.config.get(section, key)

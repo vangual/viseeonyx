@@ -46,11 +46,18 @@ class CanvasPanel(wx.Panel):
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_mouse_wheel)
 
+        # Timer for overlay management
+        self.overlay_clear_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_overlay_timer, self.overlay_clear_timer)
+
         # For resizing or panning
         self.resizing = False
         self.resizing_edge = None  # 'corner' or 'side'
         self.original_rect = None
         self.original_mouse_pos = None
+
+        # Set focus so keys work immediately without needing to click first
+        wx.CallAfter(self.SetFocus)
 
     def on_size(self, event):
         self.Refresh()
@@ -95,12 +102,21 @@ class CanvasPanel(wx.Panel):
 
     def on_left_down(self, event):
         mouse_x, mouse_y = event.GetPosition()
+        
         # Check if clicked on any image object
         clicked_obj = None
         for obj in reversed(self.image_objects):  # topmost last
             if obj.contains(mouse_x, mouse_y):
                 clicked_obj = obj
                 break
+
+        # Only clear overlays if we clicked on an object that has an overlay
+        if clicked_obj and clicked_obj.show_status_overlay:
+            logging.debug("Clearing overlay due to click on object with overlay")
+            clicked_obj.clear_status_overlay()
+            if self.overlay_clear_timer.IsRunning():
+                self.overlay_clear_timer.Stop()
+            self.Refresh()
 
         if clicked_obj:
             self.set_selected_object(clicked_obj)
@@ -158,21 +174,38 @@ class CanvasPanel(wx.Panel):
 
     def on_key_down(self, event):
         # Basic key handling for zoom in/out or other hotkeys
+        keycode = event.GetKeyCode()
+        logging.debug(f"Key pressed: {keycode}, selected_object: {self.selected_object is not None}")
+        
         if not self.selected_object:
+            logging.debug("No selected object - skipping key handler")
             event.Skip()
             return
-        keycode = event.GetKeyCode()
-        logging.debug(f"Key pressed: {keycode}")
+            
+        logging.debug(f"Processing key {keycode} with selected object")
         # e.g. + or = to zoom in, - to zoom out
         if keycode in (wx.WXK_ADD, wx.WXK_NUMPAD_ADD, 61):  # '=' can be 61
+            logging.debug(f"Zoom in: selected_object={self.selected_object}, id={id(self.selected_object) if self.selected_object else None}")
             self.selected_object.zoom_in()
-            self.Refresh()
+            logging.debug(f"After zoom_in: overlay={self.selected_object.show_status_overlay}, message='{self.selected_object.status_message}'")
+            # Use comprehensive refresh for immediate visual update
+            self._force_complete_repaint()
+            # Auto-clear status overlay after delay
+            self._schedule_overlay_clear()
         elif keycode in (wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT, 45):  # '-' can be 45
+            logging.debug(f"Zoom out: selected_object={self.selected_object}, id={id(self.selected_object) if self.selected_object else None}")
             self.selected_object.zoom_out()
-            self.Refresh()
+            logging.debug(f"After zoom_out: overlay={self.selected_object.show_status_overlay}, message='{self.selected_object.status_message}'")
+            # Use comprehensive refresh for immediate visual update
+            self._force_complete_repaint()
+            # Auto-clear status overlay after delay
+            self._schedule_overlay_clear()
         elif keycode in (ord('x'), ord('X')):
-            self.Close()
-            os._exit(0)
+            # Graceful application exit
+            wx.GetApp().set_exit_code(0)
+            # Close the main frame first
+            self.GetTopLevelParent().Close(force=True)
+            wx.CallAfter(wx.GetApp().ExitMainLoop)
         else:
             event.Skip()
 
@@ -207,17 +240,33 @@ class CanvasPanel(wx.Panel):
 
         current_path = self.selected_object.source_path
 
-        # Get the target file
+        # Get the target file and wraparound status
         if previous:
-            target_path = self.file_navigator.get_previous_file(current_path)
+            result = self.file_navigator.get_previous_file(current_path)
         else:
-            target_path = self.file_navigator.get_next_file(current_path)
+            result = self.file_navigator.get_next_file(current_path)
+
+        if not result or not result[0]:
+            logging.debug(f"Navigation failed: no result for {current_path}")
+            return
+
+        target_path, is_wraparound = result
 
         if not target_path or target_path == current_path:
             logging.debug(f"Navigation cancelled: target_path={target_path}, current_path={current_path}")
             return
 
         try:
+            # Show navigation feedback
+            if is_wraparound:
+                direction = "first" if not previous else "last"
+                self.selected_object.set_status_overlay(f"Wrapped to {direction} image", 'info')
+                # Clear overlay after longer delay for wraparound messages
+                self._schedule_overlay_clear(2000)
+            else:
+                # Show brief processing indicator
+                self.selected_object.set_status_overlay("Loading...", 'processing')
+
             # Check if we have a preloaded image
             preloaded_image = self.file_navigator.get_preloaded_image(target_path)
 
@@ -229,6 +278,12 @@ class CanvasPanel(wx.Panel):
                 # Load image on demand (this might cause a brief delay)
                 self.selected_object.change_source_path(target_path, None)
                 logging.debug(f"Loading image on demand: {target_path}")
+
+            # Clear processing overlay quickly if not wraparound
+            if not is_wraparound:
+                # Quick clear for normal navigation loading message
+                self._schedule_overlay_clear(300)
+            # Note: Wraparound messages are scheduled in the if block above with 2000ms delay
 
             logging.debug(f"Navigated to: {target_path} (selected object at {self.selected_object.x}, {self.selected_object.y})")
             self.debug_image_objects()
@@ -269,6 +324,82 @@ class CanvasPanel(wx.Panel):
         # Also force all image objects to refresh their cached visuals
         for img_obj in self.image_objects:
             img_obj.force_refresh()
+
+    def _clear_selected_object_overlay(self):
+        """Clear the status overlay from the selected object."""
+        logging.debug(f"_clear_selected_object_overlay: selected_object={self.selected_object}, id={id(self.selected_object) if self.selected_object else None}")
+        if self.selected_object and self.selected_object.show_status_overlay:
+            logging.debug(f"Clearing overlay: '{self.selected_object.status_message}' from object id={id(self.selected_object)}")
+            self.selected_object.clear_status_overlay()
+            self.Refresh()
+            logging.debug("Overlay cleared and canvas refreshed")
+        else:
+            if not self.selected_object:
+                logging.debug("No selected object to clear overlay from")
+            else:
+                logging.debug(f"Selected object has no overlay: show_status_overlay={self.selected_object.show_status_overlay}")
+
+    def on_overlay_timer(self, event):
+        """Handle overlay timer expiration."""
+        logging.debug("Overlay timer expired - clearing ALL object overlays")
+        cleared_any = False
+        for obj in self.image_objects:
+            if obj.show_status_overlay:
+                logging.debug(f"Timer clearing overlay: '{obj.status_message}' from object id={id(obj)}")
+                obj.clear_status_overlay()
+                # Force refresh to clear any cached drawing data
+                obj.force_refresh()
+                cleared_any = True
+        
+        if cleared_any:
+            # Force a comprehensive refresh to ensure overlay disappears
+            self.Refresh()
+            self.Update()
+            # Also try forcing a complete repaint
+            wx.CallAfter(self._force_complete_repaint)
+            logging.debug("Timer: Overlays cleared and canvas refreshed")
+        else:
+            logging.debug("Timer: No overlays to clear")
+        
+    def _schedule_overlay_clear(self, delay_ms=None):
+        """Schedule overlay clearing with configurable delay."""
+        if delay_ms is None:
+            delay_ms = int(self.settings_manager.get_setting("UI", "overlay_timeout_ms", "1500"))
+        
+        logging.debug(f"_schedule_overlay_clear called with delay_ms={delay_ms}")
+        logging.debug(f"Current timer state: running={self.overlay_clear_timer.IsRunning()}")
+        
+        # Check if we have any objects with overlays
+        objects_with_overlays = [obj for obj in self.image_objects if obj.show_status_overlay]
+        logging.debug(f"Objects with overlays: {len(objects_with_overlays)}")
+        for obj in objects_with_overlays:
+            logging.debug(f"  - Object {id(obj)}: '{obj.status_message}'")
+        
+        # Stop any existing timer
+        if self.overlay_clear_timer.IsRunning():
+            self.overlay_clear_timer.Stop()
+            logging.debug("Stopped existing overlay timer")
+            
+        # Start new timer
+        self.overlay_clear_timer.Start(delay_ms, wx.TIMER_ONE_SHOT)
+        logging.debug(f"Started overlay timer for {delay_ms}ms, now running: {self.overlay_clear_timer.IsRunning()}")
+
+    def _clear_overlays_on_interaction(self):
+        """Clear overlays when user interacts with objects."""
+        cleared_any = False
+        for obj in self.image_objects:
+            if obj.show_status_overlay:
+                logging.debug(f"Clearing overlay on interaction: '{obj.status_message}'")
+                obj.clear_status_overlay()
+                cleared_any = True
+        
+        # Stop any pending timer since user interaction takes precedence
+        if cleared_any and self.overlay_clear_timer.IsRunning():
+            logging.debug("Stopping overlay timer due to user interaction")
+            self.overlay_clear_timer.Stop()
+            
+        if cleared_any:
+            self.Refresh()
 
     def debug_image_objects(self):
         """Debug method to log the state of all image objects."""

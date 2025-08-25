@@ -3,7 +3,6 @@ import wx
 from .canvas_panel import CanvasPanel
 from .settings_dialog import SettingsDialog
 from .arrangement import arrange_no_resize, arrange_with_resize
-import os
 import logging
 
 
@@ -62,7 +61,7 @@ class MainFrame(wx.Frame):
             reset_size_item = menu.Append(wx.ID_ANY, "Reset Size to Original")
             self.Bind(wx.EVT_MENU, sel_obj.reset_size, reset_size_item)
             reset_zoom_item = menu.Append(wx.ID_ANY, "Reset Zoom to Original")
-            self.Bind(wx.EVT_MENU, sel_obj.reset_zoom, reset_zoom_item)
+            self.Bind(wx.EVT_MENU, self.on_reset_zoom, reset_zoom_item)
             reset_viewport_offset_item = menu.Append(wx.ID_ANY, "Reset Offset to Original")
             self.Bind(wx.EVT_MENU, sel_obj.reset_viewport_offset, reset_viewport_offset_item)
 
@@ -104,6 +103,15 @@ class MainFrame(wx.Frame):
 
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def on_reset_zoom(self, event):
+        """Reset zoom of selected object with proper refresh."""
+        sel_obj = self.canvas_panel.get_selected_object()
+        if sel_obj:
+            sel_obj.reset_zoom()
+            self.canvas_panel._force_complete_repaint()
+            # Auto-clear status overlay after delay
+            self.canvas_panel._schedule_overlay_clear()
 
     def on_mark_object(self, event):
         """Mark the currently selected object."""
@@ -188,9 +196,22 @@ class MainFrame(wx.Frame):
             self.canvas_panel.Refresh()
 
     def on_quit(self, event):
-        # End fullscreen, or close the app entirely
-        self.Close()
-        os._exit(0)  # TODO: Make this shutdown more graceful
+        """Gracefully terminate the application."""
+        try:
+            # Save settings before quitting
+            if hasattr(self, 'settings_manager') and self.settings_manager:
+                self.settings_manager.save()
+        except Exception as e:
+            logging.warning(f"Failed to save settings on quit: {e}")
+
+        # Set successful exit code
+        wx.GetApp().set_exit_code(0)
+
+        # Close frame properly before exiting
+        self.Close(force=True)
+
+        # Close the application gracefully using wxPython's proper method
+        wx.CallAfter(wx.GetApp().ExitMainLoop)
 
     def on_key_down(self, event):
         keycode = event.GetKeyCode()
