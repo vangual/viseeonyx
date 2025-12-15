@@ -81,6 +81,8 @@ Viseeonyx is a wxPython-based collage creation tool that runs in fullscreen mode
 - **Debug Mode**: App auto-detects debugger and shows windowed (with title bar) instead of fullscreen for easier debugging
 
 ### Planned Features (Not Yet Implemented)
+- **Auto-Fit on Load**: Images that exceed canvas dimensions should be created with an appropriate zoom factor to fit within the canvas bounds, preventing oversized images that extend beyond the visible area
+- **Arrange All with Zoom**: Enhanced right-click "Arrange All" option that not only repositions images but also adjusts their zoom levels for optimal layout - complementing the existing arrangement that only does resize
 - **Extensible Settings System**: Global settings window with plugin support and search functionality
 - **Cross-Platform Packaging**: Single executable builds for Windows, macOS, and Linux
 - **Expanded Testing Suite**: GUI component tests and integration tests to complement existing unit tests

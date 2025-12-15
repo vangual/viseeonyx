@@ -102,7 +102,7 @@ class CanvasPanel(wx.Panel):
 
     def on_left_down(self, event):
         mouse_x, mouse_y = event.GetPosition()
-        
+
         # Check if clicked on any image object
         clicked_obj = None
         for obj in reversed(self.image_objects):  # topmost last
@@ -176,12 +176,12 @@ class CanvasPanel(wx.Panel):
         # Basic key handling for zoom in/out or other hotkeys
         keycode = event.GetKeyCode()
         logging.debug(f"Key pressed: {keycode}, selected_object: {self.selected_object is not None}")
-        
+
         if not self.selected_object:
             logging.debug("No selected object - skipping key handler")
             event.Skip()
             return
-            
+
         logging.debug(f"Processing key {keycode} with selected object")
         # e.g. + or = to zoom in, - to zoom out
         if keycode in (wx.WXK_ADD, wx.WXK_NUMPAD_ADD, 61):  # '=' can be 61
@@ -350,7 +350,7 @@ class CanvasPanel(wx.Panel):
                 # Force refresh to clear any cached drawing data
                 obj.force_refresh()
                 cleared_any = True
-        
+
         if cleared_any:
             # Force a comprehensive refresh to ensure overlay disappears
             self.Refresh()
@@ -360,26 +360,26 @@ class CanvasPanel(wx.Panel):
             logging.debug("Timer: Overlays cleared and canvas refreshed")
         else:
             logging.debug("Timer: No overlays to clear")
-        
+
     def _schedule_overlay_clear(self, delay_ms=None):
         """Schedule overlay clearing with configurable delay."""
         if delay_ms is None:
             delay_ms = int(self.settings_manager.get_setting("UI", "overlay_timeout_ms", "1500"))
-        
+
         logging.debug(f"_schedule_overlay_clear called with delay_ms={delay_ms}")
         logging.debug(f"Current timer state: running={self.overlay_clear_timer.IsRunning()}")
-        
+
         # Check if we have any objects with overlays
         objects_with_overlays = [obj for obj in self.image_objects if obj.show_status_overlay]
         logging.debug(f"Objects with overlays: {len(objects_with_overlays)}")
         for obj in objects_with_overlays:
             logging.debug(f"  - Object {id(obj)}: '{obj.status_message}'")
-        
+
         # Stop any existing timer
         if self.overlay_clear_timer.IsRunning():
             self.overlay_clear_timer.Stop()
             logging.debug("Stopped existing overlay timer")
-            
+
         # Start new timer
         self.overlay_clear_timer.Start(delay_ms, wx.TIMER_ONE_SHOT)
         logging.debug(f"Started overlay timer for {delay_ms}ms, now running: {self.overlay_clear_timer.IsRunning()}")
@@ -392,12 +392,12 @@ class CanvasPanel(wx.Panel):
                 logging.debug(f"Clearing overlay on interaction: '{obj.status_message}'")
                 obj.clear_status_overlay()
                 cleared_any = True
-        
+
         # Stop any pending timer since user interaction takes precedence
         if cleared_any and self.overlay_clear_timer.IsRunning():
             logging.debug("Stopping overlay timer due to user interaction")
             self.overlay_clear_timer.Stop()
-            
+
         if cleared_any:
             self.Refresh()
 

@@ -132,7 +132,7 @@ class ImageObject:
             self.zoom_factor = new_zoom
             self._update_dimensions_for_zoom(old_zoom, new_zoom)
             self._clear_image_caches()
-            
+
             # Show zoom level feedback
             zoom_percent = int(self.zoom_factor * 100)
             self.set_status_overlay(f"Zoom: {zoom_percent}%", 'info')
@@ -149,7 +149,7 @@ class ImageObject:
             self.zoom_factor = new_zoom
             self._update_dimensions_for_zoom(old_zoom, new_zoom)
             self._clear_image_caches()
-            
+
             # Show zoom level feedback
             zoom_percent = int(self.zoom_factor * 100)
             self.set_status_overlay(f"Zoom: {zoom_percent}%", 'info')
@@ -162,29 +162,29 @@ class ImageObject:
         """Update object dimensions when zoom changes."""
         if not self._original_image:
             self.load_image()
-        
+
         if self._original_image:
             # Calculate the new display size based on zoom
             base_width = self._original_image.width
             base_height = self._original_image.height
-            
+
             # Update width and height to reflect the zoomed size
             self.width = max(1, int(base_width * new_zoom))
             self.height = max(1, int(base_height * new_zoom))
-            
+
             # Adjust viewport offset to try to keep the same center point visible
             if old_zoom != 0:
                 zoom_ratio = new_zoom / old_zoom
                 center_x = self.viewport_offset[0] + (self.width / zoom_ratio) // 2
                 center_y = self.viewport_offset[1] + (self.height / zoom_ratio) // 2
-                
+
                 new_vx = max(0, int(center_x - self.width // 2))
                 new_vy = max(0, int(center_y - self.height // 2))
-                
+
                 # Ensure viewport doesn't exceed scaled image bounds
                 max_vx = max(0, int(base_width * new_zoom) - self.width)
                 max_vy = max(0, int(base_height * new_zoom) - self.height)
-                
+
                 self.viewport_offset = (min(new_vx, max_vx), min(new_vy, max_vy))
 
     def _clear_image_caches(self):
@@ -193,7 +193,7 @@ class ImageObject:
 
     def set_status_overlay(self, message, status_type='info'):
         """Set a status overlay message to display on the image object.
-        
+
         Args:
             message: Text to display (None to hide overlay)
             status_type: 'info', 'warning', 'processing'
@@ -227,14 +227,14 @@ class ImageObject:
         # Calculate overlay position and size
         overlay_padding = 8
         text_size = dc.GetTextExtent(self.status_message)
-        
+
         overlay_width = text_size.width + (overlay_padding * 2)
         overlay_height = text_size.height + (overlay_padding * 2)
-        
+
         # Center the overlay on the image object
         overlay_x = self.x + (self.width - overlay_width) // 2
         overlay_y = self.y + (self.height - overlay_height) // 2
-        
+
         # Ensure overlay stays within image bounds
         overlay_x = max(self.x, min(overlay_x, self.x + self.width - overlay_width))
         overlay_y = max(self.y, min(overlay_y, self.y + self.height - overlay_height))
@@ -303,7 +303,7 @@ class ImageObject:
         self.zoom_factor = 1.0
         self._update_dimensions_for_zoom(old_zoom, 1.0)
         self._clear_image_caches()
-        
+
         # Show feedback
         self.set_status_overlay("Zoom reset to 100%", 'info')
 
@@ -334,13 +334,13 @@ class ImageObject:
             mem_orig = bytes_to_human_readable(orig_mem)
         else:
             mem_orig = "0 B"
-            
+
         if self._visible_image:
-            vis_mem = self._visible_image.width * self._visible_image.height * len(self._visible_image.getbands())  
+            vis_mem = self._visible_image.width * self._visible_image.height * len(self._visible_image.getbands())
             mem_vis = bytes_to_human_readable(vis_mem)
         else:
             mem_vis = "0 B"
-            
+
         return (
             f"ImageObject({self.source_path}, x={self.x}, y={self.y}, "
             f"w={self.width}, h={self.height}, "
